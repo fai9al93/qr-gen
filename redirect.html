@@ -42,10 +42,18 @@ p{color:#888;margin-bottom:28px;font-size:0.9rem}
         var h1 = document.getElementById('app-title');
         if(h1) h1.textContent = appName;
 
-        // Build buttons
+        // Build buttons (safe — no raw HTML injection)
         var btnsEl = document.getElementById('btns');
-        if(iosLink) btnsEl.innerHTML += '<a href="'+iosLink+'" class="btn">App Store ←</a>';
-        if(androidLink) btnsEl.innerHTML += '<a href="'+androidLink+'" class="btn">Google Play ←</a>';
+        if(iosLink) {
+            var a1 = document.createElement('a');
+            a1.href = iosLink; a1.className = 'btn'; a1.textContent = 'App Store ←';
+            btnsEl.appendChild(a1);
+        }
+        if(androidLink) {
+            var a2 = document.createElement('a');
+            a2.href = androidLink; a2.className = 'btn'; a2.textContent = 'Google Play ←';
+            btnsEl.appendChild(a2);
+        }
 
         // If no links provided
         if(!iosLink && !androidLink){

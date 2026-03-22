@@ -1173,7 +1173,7 @@
                             const x = (canvas.width - logoSize) / 2;
                             const y = (canvas.height - logoSize) / 2;
                             const padding = 6;
-                            ctx.fillStyle = useTransparent ? 'rgba(255,255,255,0)' : bgColor;
+                            ctx.fillStyle = useTransparent ? '#ffffff' : bgColor;
                             ctx.beginPath();
                             ctx.roundRect(x - padding, y - padding, logoSize + padding * 2, logoSize + padding * 2, 4);
                             ctx.fill();
@@ -1209,7 +1209,7 @@
             const c = document.createElement('canvas');
             c.width = canvas.width; c.height = canvas.height;
             const ctx = c.getContext('2d');
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = document.getElementById('color-bg').value || '#ffffff';
             ctx.fillRect(0, 0, c.width, c.height);
             ctx.drawImage(canvas, 0, 0);
             const link = document.createElement('a');
@@ -1265,7 +1265,19 @@
                 }
             }
 
-            const svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgSize} ${svgSize}" width="${svgSize}" height="${svgSize}" shape-rendering="crispEdges">\n${defs}${bgRect}\n${rects}\n</svg>`;
+            let logoSvg = '';
+            if (logoDataUrl) {
+                const logoSize = svgSize * 0.22;
+                const lx = (svgSize - logoSize) / 2;
+                const ly = (svgSize - logoSize) / 2;
+                const pad = svgSize * 0.02;
+                if (!useTransparent) {
+                    logoSvg += `<rect x="${(lx - pad).toFixed(2)}" y="${(ly - pad).toFixed(2)}" width="${(logoSize + pad * 2).toFixed(2)}" height="${(logoSize + pad * 2).toFixed(2)}" rx="4" fill="${bgColor}"/>`;
+                }
+                logoSvg += `<image href="${logoDataUrl}" x="${lx.toFixed(2)}" y="${ly.toFixed(2)}" width="${logoSize.toFixed(2)}" height="${logoSize.toFixed(2)}"/>`;
+            }
+
+            const svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${svgSize} ${svgSize}" width="${svgSize}" height="${svgSize}" shape-rendering="crispEdges">\n${defs}${bgRect}\n${rects}\n${logoSvg}\n</svg>`;
             const blob = new Blob([svg], { type: 'image/svg+xml' });
             const link = document.createElement('a');
             link.download = 'qrcode.svg';
@@ -1354,8 +1366,13 @@
                 saved.unshift(entry);
             }
 
-            localStorage.setItem('qr_saved', JSON.stringify(saved));
-            showToast(editId ? 'تم تحديث QR كود' : 'تم الحفظ في المحفوظات');
+            try {
+                localStorage.setItem('qr_saved', JSON.stringify(saved));
+                showToast(editId ? 'تم تحديث QR كود' : 'تم الحفظ في المحفوظات');
+            } catch(e) {
+                showToast('المساحة ممتلئة — احذف بعض المحفوظات', true);
+                return;
+            }
 
             // Remove edit param from URL
             if (editId) {
