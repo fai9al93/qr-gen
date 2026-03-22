@@ -912,7 +912,6 @@
             </div>
 
             <div id="qrcode-container"></div>
-            <canvas id="final-canvas" class="hidden-canvas"></canvas>
             <div class="download-btns" id="download-btns" style="display:none">
                 <button class="dl-btn" id="dl-png">PNG ↓</button>
                 <button class="dl-btn" id="dl-svg">SVG ↓</button>
@@ -931,6 +930,7 @@
         let errorCorrectionLevel = 'M';
         let logoDataUrl = null;
         let qrInstance = null;
+        let outputCanvas = null; // processed canvas for downloads
 
         // ─── Tab switching ───
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1118,8 +1118,13 @@
             container.classList.toggle('checkerboard', useTransparent);
             document.getElementById('qr-placeholder').style.display = 'none';
 
+            // Create a hidden temp div for QRCode.js to render into
+            const tempDiv = document.createElement('div');
+            tempDiv.style.display = 'none';
+            document.body.appendChild(tempDiv);
+
             try {
-                qrInstance = new QRCode(container, {
+                qrInstance = new QRCode(tempDiv, {
                     text: data,
                     width: size,
                     height: size,
@@ -1129,29 +1134,32 @@
                 });
 
                 setTimeout(() => {
-                    const srcCanvas = container.querySelector('canvas');
-                    if (!srcCanvas) return;
+                    const srcCanvas = tempDiv.querySelector('canvas');
+                    if (!srcCanvas) { tempDiv.remove(); return; }
 
-                    // Copy to final-canvas so QRCode.js can't overwrite our edits
-                    const finalCanvas = document.getElementById('final-canvas');
-                    finalCanvas.width = srcCanvas.width;
-                    finalCanvas.height = srcCanvas.height;
-                    const ctx = finalCanvas.getContext('2d');
+                    // Create fresh output canvas
+                    outputCanvas = document.createElement('canvas');
+                    outputCanvas.width = srcCanvas.width;
+                    outputCanvas.height = srcCanvas.height;
+                    const ctx = outputCanvas.getContext('2d');
                     ctx.drawImage(srcCanvas, 0, 0);
 
+                    // Done with temp div
+                    tempDiv.remove();
+
                     if (useGradient) {
-                        const imageData = ctx.getImageData(0, 0, finalCanvas.width, finalCanvas.height);
+                        const imageData = ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
                         const pixels = imageData.data;
                         const c1 = hexToRgb(fgColor);
                         const c2 = hexToRgb(fgColor2);
                         const bg = hexToRgb(bgColor);
-                        for (let y = 0; y < finalCanvas.height; y++) {
-                            const ratio = y / finalCanvas.height;
+                        for (let y = 0; y < outputCanvas.height; y++) {
+                            const ratio = y / outputCanvas.height;
                             const r = Math.round(c1.r + (c2.r - c1.r) * ratio);
                             const g = Math.round(c1.g + (c2.g - c1.g) * ratio);
                             const b = Math.round(c1.b + (c2.b - c1.b) * ratio);
-                            for (let x = 0; x < finalCanvas.width; x++) {
-                                const i = (y * finalCanvas.width + x) * 4;
+                            for (let x = 0; x < outputCanvas.width; x++) {
+                                const i = (y * outputCanvas.width + x) * 4;
                                 if (pixels[i] !== bg.r || pixels[i+1] !== bg.g || pixels[i+2] !== bg.b) {
                                     pixels[i] = r; pixels[i+1] = g; pixels[i+2] = b;
                                 }
@@ -1161,7 +1169,7 @@
                     }
 
                     if (useTransparent) {
-                        const imageData = ctx.getImageData(0, 0, finalCanvas.width, finalCanvas.height);
+                        const imageData = ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
                         const pixels = imageData.data;
                         const bg = hexToRgb(bgColor);
                         for (let i = 0; i < pixels.length; i += 4) {
@@ -1173,13 +1181,9 @@
                     }
 
                     function finalize() {
-                        // Remove original canvas, show final-canvas
-                        srcCanvas.remove();
-                        finalCanvas.className = '';
-                        finalCanvas.style.display = 'block';
-                        if (!container.contains(finalCanvas)) {
-                            container.appendChild(finalCanvas);
-                        }
+                        container.innerHTML = '';
+                        outputCanvas.style.display = 'block';
+                        container.appendChild(outputCanvas);
                         document.getElementById('download-btns').style.display = 'flex';
                         document.getElementById('save-qr-btn').style.display = 'block';
                     }
@@ -1188,14 +1192,14 @@
                         const img = new Image();
                         img.onload = function() {
                             const logoSize = size * 0.22;
-                            const x = (finalCanvas.width - logoSize) / 2;
-                            const y = (finalCanvas.height - logoSize) / 2;
+                            const lx = (outputCanvas.width - logoSize) / 2;
+                            const ly = (outputCanvas.height - logoSize) / 2;
                             const padding = 6;
                             ctx.fillStyle = useTransparent ? '#ffffff' : bgColor;
                             ctx.beginPath();
-                            ctx.roundRect(x - padding, y - padding, logoSize + padding * 2, logoSize + padding * 2, 4);
+                            ctx.roundRect(lx - padding, ly - padding, logoSize + padding * 2, logoSize + padding * 2, 4);
                             ctx.fill();
-                            ctx.drawImage(img, x, y, logoSize, logoSize);
+                            ctx.drawImage(img, lx, ly, logoSize, logoSize);
                             finalize();
                         };
                         img.src = logoDataUrl;
@@ -1210,26 +1214,24 @@
             }
         }
 
-        // ─── Downloads (always use final-canvas) ───
+        // ─── Downloads (always use outputCanvas) ───
         document.getElementById('dl-png').addEventListener('click', () => {
-            const canvas = document.getElementById('final-canvas');
-            if (!canvas || !canvas.width) { showToast('ولّد QR كود أولاً', true); return; }
+            if (!outputCanvas) { showToast('ولّد QR كود أولاً', true); return; }
             const link = document.createElement('a');
             link.download = 'qrcode.png';
-            link.href = canvas.toDataURL('image/png');
+            link.href = outputCanvas.toDataURL('image/png');
             link.click();
             showToast('تم تحميل PNG');
         });
 
         document.getElementById('dl-jpg').addEventListener('click', () => {
-            const canvas = document.getElementById('final-canvas');
-            if (!canvas || !canvas.width) { showToast('ولّد QR كود أولاً', true); return; }
+            if (!outputCanvas) { showToast('ولّد QR كود أولاً', true); return; }
             const c = document.createElement('canvas');
-            c.width = canvas.width; c.height = canvas.height;
+            c.width = outputCanvas.width; c.height = outputCanvas.height;
             const ctx = c.getContext('2d');
             ctx.fillStyle = document.getElementById('color-bg').value || '#ffffff';
             ctx.fillRect(0, 0, c.width, c.height);
-            ctx.drawImage(canvas, 0, 0);
+            ctx.drawImage(outputCanvas, 0, 0);
             const link = document.createElement('a');
             link.download = 'qrcode.jpg';
             link.href = c.toDataURL('image/jpeg', 0.95);
@@ -1356,13 +1358,12 @@
 
         document.getElementById('save-qr-btn').addEventListener('click', () => {
             const config = getCurrentConfig();
-            const canvas = document.getElementById('final-canvas');
-            if (!canvas || !canvas.width) { showToast('ولّد QR كود أولاً', true); return; }
+            if (!outputCanvas) { showToast('ولّد QR كود أولاً', true); return; }
 
             const thumbCanvas = document.createElement('canvas');
             thumbCanvas.width = 150; thumbCanvas.height = 150;
             const tctx = thumbCanvas.getContext('2d');
-            tctx.drawImage(canvas, 0, 0, 150, 150);
+            tctx.drawImage(outputCanvas, 0, 0, 150, 150);
             const thumbnail = thumbCanvas.toDataURL('image/png');
 
             const saved = JSON.parse(localStorage.getItem('qr_saved') || '[]');
