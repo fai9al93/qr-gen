@@ -675,7 +675,8 @@
     <div class="topbar">
         <div class="topbar-logo">QR—GEN</div>
         <div class="topbar-nav">
-            <span style="padding:14px 18px;color:#888;font-size:0.82rem">مولّد QR كود احترافي ومجاني</span>
+            <a href="index.html" class="active">المولّد</a>
+            <a href="saved.html">المحفوظات</a>
         </div>
         <div class="topbar-badge">v1.0 — مجاني</div>
     </div>
@@ -917,6 +918,7 @@
                 <button class="dl-btn" id="dl-svg">SVG ↓</button>
                 <button class="dl-btn" id="dl-jpg">JPG ↓</button>
             </div>
+            <button class="dl-btn" id="save-qr-btn" style="display:none;width:100%;margin-top:8px;border:2px solid #111;padding:10px 18px">حفظ في المحفوظات ✦</button>
         </div>
     </div>
 
@@ -1181,6 +1183,7 @@
                     }
 
                     document.getElementById('download-btns').style.display = 'flex';
+                    document.getElementById('save-qr-btn').style.display = 'block';
                 }, 100);
 
             } catch(e) {
@@ -1277,6 +1280,177 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') generateQR();
         });
+
+        // ─── Save QR ───
+        function getCurrentConfig() {
+            const config = {
+                tab: currentTab,
+                ec: errorCorrectionLevel,
+                size: document.getElementById('qr-size').value,
+                fgColor: document.getElementById('color-fg').value,
+                bgColor: document.getElementById('color-bg').value,
+                gradient: document.getElementById('gradient-toggle').checked,
+                fgColor2: document.getElementById('color-fg2').value,
+                transparent: document.getElementById('transparent-toggle').checked,
+                logo: logoDataUrl || null
+            };
+            switch (currentTab) {
+                case 'url': config.data = {url: document.getElementById('input-url').value}; break;
+                case 'text': config.data = {text: document.getElementById('input-text').value}; break;
+                case 'wifi': config.data = {ssid: document.getElementById('wifi-ssid').value, pass: document.getElementById('wifi-pass').value, enc: document.getElementById('wifi-enc').value, hidden: document.getElementById('wifi-hidden').checked}; break;
+                case 'vcard': config.data = {fname: document.getElementById('vcard-fname').value, lname: document.getElementById('vcard-lname').value, phone: document.getElementById('vcard-phone').value, email: document.getElementById('vcard-email').value, org: document.getElementById('vcard-org').value, title: document.getElementById('vcard-title').value, url: document.getElementById('vcard-url').value}; break;
+                case 'email': config.data = {to: document.getElementById('email-to').value, subject: document.getElementById('email-subject').value, body: document.getElementById('email-body').value}; break;
+                case 'phone': config.data = {phone: document.getElementById('input-phone').value}; break;
+                case 'sms': config.data = {phone: document.getElementById('sms-phone').value, body: document.getElementById('sms-body').value}; break;
+                case 'smartlink': config.data = {name: document.getElementById('app-name').value, ios: document.getElementById('app-ios').value, android: document.getElementById('app-android').value, fallback: document.getElementById('app-fallback').value}; break;
+            }
+            return config;
+        }
+
+        function getQRLabel(config) {
+            const d = config.data;
+            switch (config.tab) {
+                case 'url': return d.url || 'رابط';
+                case 'text': return (d.text || 'نص').substring(0, 40);
+                case 'wifi': return d.ssid || 'واي فاي';
+                case 'vcard': return ((d.fname || '') + ' ' + (d.lname || '')).trim() || 'بطاقة';
+                case 'email': return d.to || 'إيميل';
+                case 'phone': return d.phone || 'جوال';
+                case 'sms': return d.phone || 'SMS';
+                case 'smartlink': return d.name || 'رابط ذكي';
+                default: return 'QR';
+            }
+        }
+
+        const tabLabels = {url:'رابط',text:'نص',wifi:'واي فاي',vcard:'بطاقة',email:'إيميل',phone:'جوال',sms:'SMS',smartlink:'رابط ذكي'};
+
+        document.getElementById('save-qr-btn').addEventListener('click', () => {
+            const config = getCurrentConfig();
+            const canvas = document.querySelector('#qrcode-container canvas');
+            if (!canvas) { showToast('ولّد QR كود أولاً', true); return; }
+
+            const thumbCanvas = document.createElement('canvas');
+            thumbCanvas.width = 150; thumbCanvas.height = 150;
+            const tctx = thumbCanvas.getContext('2d');
+            tctx.drawImage(canvas, 0, 0, 150, 150);
+            const thumbnail = thumbCanvas.toDataURL('image/png');
+
+            const saved = JSON.parse(localStorage.getItem('qr_saved') || '[]');
+            const editId = new URLSearchParams(window.location.search).get('edit');
+
+            const entry = {
+                id: editId || Date.now().toString(),
+                label: getQRLabel(config),
+                type: tabLabels[config.tab] || config.tab,
+                thumbnail: thumbnail,
+                config: config,
+                date: new Date().toLocaleDateString('ar-SA')
+            };
+
+            if (editId) {
+                const idx = saved.findIndex(s => s.id === editId);
+                if (idx >= 0) saved[idx] = entry; else saved.unshift(entry);
+            } else {
+                saved.unshift(entry);
+            }
+
+            localStorage.setItem('qr_saved', JSON.stringify(saved));
+            showToast(editId ? 'تم تحديث QR كود' : 'تم الحفظ في المحفوظات');
+
+            // Remove edit param from URL
+            if (editId) {
+                history.replaceState(null, '', 'index.html');
+            }
+        });
+
+        // ─── Load from edit param ───
+        function loadConfig(config) {
+            // Switch tab
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const tabBtn = document.querySelector(`.tab-btn[data-tab="${config.tab}"]`);
+            if (tabBtn) tabBtn.classList.add('active');
+            currentTab = config.tab;
+            document.getElementById('tab-' + config.tab).classList.add('active');
+
+            // Set data fields
+            const d = config.data;
+            switch (config.tab) {
+                case 'url': document.getElementById('input-url').value = d.url || ''; break;
+                case 'text': document.getElementById('input-text').value = d.text || ''; break;
+                case 'wifi':
+                    document.getElementById('wifi-ssid').value = d.ssid || '';
+                    document.getElementById('wifi-pass').value = d.pass || '';
+                    document.getElementById('wifi-enc').value = d.enc || 'WPA';
+                    document.getElementById('wifi-hidden').checked = d.hidden || false;
+                    break;
+                case 'vcard':
+                    document.getElementById('vcard-fname').value = d.fname || '';
+                    document.getElementById('vcard-lname').value = d.lname || '';
+                    document.getElementById('vcard-phone').value = d.phone || '';
+                    document.getElementById('vcard-email').value = d.email || '';
+                    document.getElementById('vcard-org').value = d.org || '';
+                    document.getElementById('vcard-title').value = d.title || '';
+                    document.getElementById('vcard-url').value = d.url || '';
+                    break;
+                case 'email':
+                    document.getElementById('email-to').value = d.to || '';
+                    document.getElementById('email-subject').value = d.subject || '';
+                    document.getElementById('email-body').value = d.body || '';
+                    break;
+                case 'phone': document.getElementById('input-phone').value = d.phone || ''; break;
+                case 'sms':
+                    document.getElementById('sms-phone').value = d.phone || '';
+                    document.getElementById('sms-body').value = d.body || '';
+                    break;
+                case 'smartlink':
+                    document.getElementById('app-name').value = d.name || '';
+                    document.getElementById('app-ios').value = d.ios || '';
+                    document.getElementById('app-android').value = d.android || '';
+                    document.getElementById('app-fallback').value = d.fallback || '';
+                    break;
+            }
+
+            // Set customization
+            document.getElementById('color-fg').value = config.fgColor || '#000000';
+            document.getElementById('color-fg-hex').value = config.fgColor || '#000000';
+            document.getElementById('color-bg').value = config.bgColor || '#ffffff';
+            document.getElementById('color-bg-hex').value = config.bgColor || '#ffffff';
+            document.getElementById('gradient-toggle').checked = config.gradient || false;
+            document.getElementById('gradient-section').classList.toggle('show', config.gradient || false);
+            document.getElementById('color-fg2').value = config.fgColor2 || '#888888';
+            document.getElementById('color-fg2-hex').value = config.fgColor2 || '#888888';
+            document.getElementById('transparent-toggle').checked = config.transparent || false;
+            const bgField = document.getElementById('color-bg').closest('.color-field');
+            if (bgField) bgField.style.opacity = config.transparent ? '0.35' : '1';
+            document.getElementById('qr-size').value = config.size || '300';
+            document.getElementById('size-value').textContent = (config.size || '300') + 'px';
+
+            // EC level
+            document.querySelectorAll('.opt-btn[data-ec]').forEach(b => {
+                b.classList.toggle('active', b.dataset.ec === config.ec);
+            });
+            errorCorrectionLevel = config.ec || 'M';
+
+            if (config.logo) {
+                logoDataUrl = config.logo;
+                document.getElementById('logo-img').src = config.logo;
+                document.getElementById('logo-preview').style.display = 'block';
+            }
+
+            // Auto generate
+            setTimeout(generateQR, 200);
+        }
+
+        // Check if editing
+        (function() {
+            const editId = new URLSearchParams(window.location.search).get('edit');
+            if (editId) {
+                const saved = JSON.parse(localStorage.getItem('qr_saved') || '[]');
+                const entry = saved.find(s => s.id === editId);
+                if (entry) loadConfig(entry.config);
+            }
+        })();
     </script>
 </body>
 </html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR — المحفوظات</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'IBM Plex Sans Arabic', 'IBM Plex Mono', sans-serif;
+            background: #f5f5f0;
+            min-height: 100vh;
+            color: #111;
+            direction: rtl;
+        }
+
+        .topbar {
+            border-bottom: 2px solid #111;
+            display: flex;
+            align-items: stretch;
+        }
+
+        .topbar-logo {
+            padding: 14px 24px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: -0.5px;
+            border-left: 2px solid #111;
+            white-space: nowrap;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .topbar-nav {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .topbar-nav a {
+            padding: 14px 18px;
+            text-decoration: none;
+            color: #111;
+            font-size: 0.82rem;
+            border-left: 1px solid #ccc;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+
+        .topbar-nav a:hover { background: #111; color: #f5f5f0; }
+        .topbar-nav a.active { background: #111; color: #f5f5f0; }
+
+        .topbar-badge {
+            margin-right: auto;
+            margin-left: 0;
+            padding: 14px 20px;
+            font-size: 0.7rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: #888;
+            border-right: 1px solid #ccc;
+        }
+
+        .page-header {
+            border-bottom: 2px solid #111;
+            padding: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .page-header h1 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        .page-header .count {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.82rem;
+            color: #888;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 24px;
+            text-align: center;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state p {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+
+        .empty-state a {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #111;
+            color: #f5f5f0;
+            text-decoration: none;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            border: 2px solid #111;
+            transition: all 0.15s;
+        }
+
+        .empty-state a:hover { background: #f5f5f0; color: #111; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0;
+        }
+
+        .card {
+            border-left: 2px solid #111;
+            border-bottom: 2px solid #111;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-thumb {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #ddd;
+            background: #fafaf6;
+            min-height: 180px;
+        }
+
+        .card-thumb img {
+            width: 130px;
+            height: 130px;
+            image-rendering: pixelated;
+        }
+
+        .card-body {
+            padding: 16px 20px;
+            flex: 1;
+        }
+
+        .card-label {
+            font-size: 0.92rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            word-break: break-all;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .card-meta {
+            display: flex;
+            gap: 12px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.72rem;
+            color: #999;
+        }
+
+        .card-type {
+            background: #f5f5f0;
+            border: 1px solid #ddd;
+            padding: 2px 8px;
+        }
+
+        .card-actions {
+            display: flex;
+            border-top: 1px solid #ddd;
+        }
+
+        .card-actions button {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            background: #fff;
+            cursor: pointer;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.78rem;
+            color: #111;
+            transition: all 0.15s;
+        }
+
+        .card-actions button:first-child {
+            border-left: 1px solid #ddd;
+        }
+
+        .card-actions button:hover {
+            background: #111;
+            color: #f5f5f0;
+        }
+
+        .card-actions button.delete-btn:hover {
+            background: #c00;
+            color: #fff;
+        }
+
+        .footer {
+            border-top: 2px solid #111;
+            padding: 16px 24px;
+            text-align: center;
+            font-size: 0.72rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: #aaa;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #111;
+            color: #f5f5f0;
+            padding: 12px 28px;
+            font-size: 0.82rem;
+            font-family: 'IBM Plex Mono', monospace;
+            border: 2px solid #111;
+            transition: transform 0.25s;
+            z-index: 1000;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .clear-all-btn {
+            padding: 8px 18px;
+            background: #fff;
+            border: 2px solid #111;
+            cursor: pointer;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            color: #111;
+            transition: all 0.15s;
+        }
+
+        .clear-all-btn:hover { background: #c00; color: #fff; border-color: #c00; }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <div class="topbar-logo">QR—GEN</div>
+        <div class="topbar-nav">
+            <a href="index.html">المولّد</a>
+            <a href="saved.html" class="active">المحفوظات</a>
+        </div>
+        <div class="topbar-badge">v1.0 — مجاني</div>
+    </div>
+
+    <div class="page-header">
+        <h1>المحفوظات</h1>
+        <div style="display:flex;align-items:center;gap:16px">
+            <span class="count" id="count"></span>
+            <button class="clear-all-btn" id="clear-all" style="display:none">حذف الكل</button>
+        </div>
+    </div>
+
+    <div id="content"></div>
+
+    <div class="footer">QR—GEN — مولّد QR كود مجاني — لا اشتراك، لا تسجيل</div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        function render() {
+            const saved = JSON.parse(localStorage.getItem('qr_saved') || '[]');
+            const content = document.getElementById('content');
+            const countEl = document.getElementById('count');
+            const clearBtn = document.getElementById('clear-all');
+
+            countEl.textContent = saved.length + ' عنصر';
+            clearBtn.style.display = saved.length > 0 ? 'block' : 'none';
+
+            if (saved.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 100 100" fill="none" stroke="#ddd" stroke-width="2">
+                            <rect x="10" y="10" width="25" height="25" rx="2"/>
+                            <rect x="65" y="10" width="25" height="25" rx="2"/>
+                            <rect x="10" y="65" width="25" height="25" rx="2"/>
+                            <rect x="15" y="15" width="15" height="15" rx="1" fill="#ddd"/>
+                            <rect x="70" y="15" width="15" height="15" rx="1" fill="#ddd"/>
+                            <rect x="15" y="70" width="15" height="15" rx="1" fill="#ddd"/>
+                        </svg>
+                        <p>ما في أي QR كود محفوظ بعد</p>
+                        <a href="index.html">أنشئ QR كود ←</a>
+                    </div>`;
+                return;
+            }
+
+            let html = '<div class="grid">';
+            saved.forEach(item => {
+                html += `
+                <div class="card" data-id="${item.id}">
+                    <div class="card-thumb">
+                        <img src="${item.thumbnail}" alt="QR">
+                    </div>
+                    <div class="card-body">
+                        <div class="card-label">${escapeHtml(item.label)}</div>
+                        <div class="card-meta">
+                            <span class="card-type">${escapeHtml(item.type)}</span>
+                            <span>${item.date || ''}</span>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button onclick="editQR('${item.id}')">تعديل</button>
+                        <button class="delete-btn" onclick="deleteQR('${item.id}')">حذف</button>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        function editQR(id) {
+            window.location.href = 'index.html?edit=' + id;
+        }
+
+        function deleteQR(id) {
+            let saved = JSON.parse(localStorage.getItem('qr_saved') || '[]');
+            saved = saved.filter(s => s.id !== id);
+            localStorage.setItem('qr_saved', JSON.stringify(saved));
+            showToast('تم الحذف');
+            render();
+        }
+
+        document.getElementById('clear-all').addEventListener('click', () => {
+            if (confirm('متأكد تبي تحذف كل المحفوظات؟')) {
+                localStorage.removeItem('qr_saved');
+                showToast('تم حذف الكل');
+                render();
+            }
+        });
+
+        render();
+    </script>
+</body>
+</html>
