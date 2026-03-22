@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR — مولّد</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans Arabic', 'IBM Plex Mono', sans-serif;
+            background: #f5f5f0;
+            min-height: 100vh;
+            color: #111;
+            direction: rtl;
+        }
+
+        /* ─── Top bar ─── */
+        .topbar {
+            border-bottom: 2px solid #111;
+            display: flex;
+            align-items: stretch;
+        }
+
+        .topbar-logo {
+            padding: 14px 24px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: -0.5px;
+            border-left: 2px solid #111;
+            white-space: nowrap;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .topbar-nav {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .topbar-nav a {
+            padding: 14px 18px;
+            text-decoration: none;
+            color: #111;
+            font-size: 0.82rem;
+            border-left: 1px solid #ccc;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+
+        .topbar-nav a:hover {
+            background: #111;
+            color: #f5f5f0;
+        }
+
+        .topbar-nav a.active {
+            background: #111;
+            color: #f5f5f0;
+        }
+
+        .topbar-badge {
+            margin-right: auto;
+            margin-left: 0;
+            padding: 14px 20px;
+            font-size: 0.7rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: #888;
+            border-right: 1px solid #ccc;
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            border-bottom: 2px solid #111;
+            display: flex;
+        }
+
+        .hero-text {
+            flex: 1;
+            padding: 40px 32px;
+        }
+
+        .hero-text h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -1px;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .hero-text h1 span {
+            display: block;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #888;
+            margin-top: 10px;
+            letter-spacing: 0;
+            font-family: 'IBM Plex Sans Arabic', sans-serif;
+        }
+
+        .hero-side {
+            width: 260px;
+            border-right: 2px solid #111;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 12px;
+            background: #fff;
+        }
+
+        .hero-stat {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.78rem;
+            color: #888;
+        }
+
+        .hero-stat strong {
+            display: block;
+            font-size: 1.4rem;
+            color: #111;
+        }
+
+        @media (max-width: 768px) {
+            .hero { flex-direction: column; }
+            .hero-side { width: 100%; border-right: none; border-top: 2px solid #111; flex-direction: row; }
+            .hero-text h1 { font-size: 2rem; }
+        }
+
+        /* ─── Main layout ─── */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            min-height: calc(100vh - 200px);
+        }
+
+        @media (max-width: 860px) {
+            .main { grid-template-columns: 1fr; }
+            .output-panel { border-right: none !important; border-top: 2px solid #111; }
+        }
+
+        /* ─── Input panel ─── */
+        .input-panel {
+            border-left: 2px solid #111;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tabs row */
+        .tabs-row {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 2px solid #111;
+        }
+
+        .tab-btn {
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            border-left: 1px solid #ddd;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: 'IBM Plex Sans Arabic', sans-serif;
+            color: #666;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:first-child {
+            border-left: none;
+        }
+
+        .tab-btn:hover {
+            background: #eee;
+        }
+
+        .tab-btn.active {
+            background: #111;
+            color: #f5f5f0;
+        }
+
+        /* Tab content */
+        .tab-content {
+            display: none;
+            padding: 24px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Section labels */
+        .section-title {
+            font-size: 0.72rem;
+            font-family: 'IBM Plex Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #999;
+            padding: 12px 24px;
+            border-bottom: 1px solid #ddd;
+            border-top: 2px solid #111;
+            background: #fafaf6;
+        }
+
+        /* Form elements */
+        label {
+            display: block;
+            font-size: 0.78rem;
+            color: #888;
+            margin-bottom: 5px;
+            margin-top: 14px;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        label:first-child {
+            margin-top: 0;
+        }
+
+        input[type="text"],
+        input[type="url"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #fff;
+            border: 2px solid #111;
+            color: #111;
+            font-size: 0.9rem;
+            font-family: 'IBM Plex Mono', monospace;
+            direction: ltr;
+            text-align: right;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            background: #fffde6;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        select {
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23111'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 12px center;
+        }
+
+        /* Inline fields */
+        .inline-fields {
+            display: flex;
+            gap: 12px;
+        }
+
+        .inline-fields > div {
+            flex: 1;
+        }
+
+        /* Color controls */
+        .color-controls {
+            padding: 20px 24px;
+        }
+
+        .color-row {
+            display: flex;
+            gap: 16px;
+        }
+
+        .color-field {
+            flex: 1;
+        }
+
+        .color-input-wrapper {
+            display: flex;
+            align-items: stretch;
+            border: 2px solid #111;
+            background: #fff;
+        }
+
+        input[type="color"] {
+            width: 42px;
+            min-height: 38px;
+            border: none;
+            border-left: 2px solid #111;
+            cursor: pointer;
+            padding: 3px;
+            background: #fff;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 3px;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+        }
+
+        .color-hex {
+            flex: 1;
+            border: none;
+            padding: 8px 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.82rem;
+            direction: ltr;
+            text-align: left;
+            color: #111;
+            background: #fff;
+        }
+
+        .color-hex:focus {
+            outline: none;
+            background: #fffde6;
+        }
+
+        /* Toggle */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 14px;
+            padding: 10px 0;
+        }
+
+        .toggle-label {
+            color: #888;
+            font-size: 0.78rem;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .toggle {
+            position: relative;
+            width: 38px;
+            height: 20px;
+        }
+
+        .toggle input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #ddd;
+            border: 2px solid #111;
+            transition: 0.2s;
+        }
+
+        .toggle-slider:before {
+            content: '';
+            position: absolute;
+            height: 12px;
+            width: 12px;
+            right: 2px;
+            bottom: 2px;
+            background: #111;
+            transition: 0.2s;
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background: #111;
+        }
+
+        .toggle input:checked + .toggle-slider:before {
+            background: #f5f5f0;
+            transform: translateX(-16px);
+        }
+
+        .gradient-color {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .gradient-color.show {
+            display: block;
+        }
+
+        /* EC / option buttons */
+        .option-group {
+            display: flex;
+            gap: 0;
+            border: 2px solid #111;
+            margin-top: 6px;
+        }
+
+        .opt-btn {
+            flex: 1;
+            padding: 9px 6px;
+            background: #fff;
+            border: none;
+            border-left: 1px solid #ddd;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: #666;
+            transition: all 0.15s;
+            text-align: center;
+        }
+
+        .opt-btn:first-child { border-left: none; }
+        .opt-btn:hover { background: #eee; }
+
+        .opt-btn.active {
+            background: #111;
+            color: #f5f5f0;
+        }
+
+        /* Size */
+        .size-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #size-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.78rem;
+            color: #111;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 6px;
+            accent-color: #111;
+            height: 3px;
+        }
+
+        /* Logo upload */
+        .upload-area {
+            border: 2px dashed #111;
+            padding: 18px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+            margin-top: 6px;
+            background: #fff;
+        }
+
+        .upload-area:hover { background: #fffde6; }
+
+        .upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-area p {
+            color: #888;
+            font-size: 0.78rem;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .logo-preview {
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .logo-preview img {
+            max-width: 60px;
+            max-height: 60px;
+            border: 2px solid #111;
+        }
+
+        .logo-preview .remove-logo {
+            display: block;
+            margin: 6px auto 0;
+            background: none;
+            border: none;
+            color: #111;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: 'IBM Plex Mono', monospace;
+            text-decoration: underline;
+        }
+
+        /* Generate button */
+        .generate-btn {
+            width: 100%;
+            padding: 16px;
+            background: #111;
+            color: #f5f5f0;
+            border: 2px solid #111;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'IBM Plex Mono', monospace;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+            margin-top: 20px;
+        }
+
+        .generate-btn:hover {
+            background: #f5f5f0;
+            color: #111;
+        }
+
+        /* ─── Output panel ─── */
+        .output-panel {
+            border-right: 2px solid #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            padding: 30px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .qr-placeholder {
+            text-align: center;
+            color: #ccc;
+        }
+
+        .qr-placeholder svg {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 16px;
+        }
+
+        .qr-placeholder p {
+            font-size: 0.8rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: #bbb;
+        }
+
+        #qrcode-container {
+            background: #fff;
+            padding: 24px;
+            border: 2px solid #111;
+            display: none;
+        }
+
+        #qrcode-container canvas {
+            display: block !important;
+        }
+
+        #qrcode-container img {
+            display: none !important;
+        }
+
+        .download-btns {
+            display: flex;
+            gap: 0;
+            margin-top: 16px;
+            border: 2px solid #111;
+        }
+
+        .dl-btn {
+            padding: 10px 18px;
+            border: none;
+            border-left: 1px solid #ddd;
+            background: #fff;
+            color: #111;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-family: 'IBM Plex Mono', monospace;
+            transition: all 0.15s;
+        }
+
+        .dl-btn:first-child { border-left: none; }
+
+        .dl-btn:hover {
+            background: #111;
+            color: #f5f5f0;
+        }
+
+        /* Smart link */
+        .info-box {
+            background: #fff;
+            border: 2px solid #111;
+            padding: 14px;
+            margin-bottom: 16px;
+            font-size: 0.8rem;
+            line-height: 1.7;
+            color: #555;
+        }
+
+        .info-box strong { color: #111; }
+
+        .smart-dl-btn {
+            width: 100%;
+            padding: 12px;
+            background: #fff;
+            border: 2px solid #111;
+            color: #111;
+            font-size: 0.82rem;
+            font-family: 'IBM Plex Mono', monospace;
+            cursor: pointer;
+            margin-top: 14px;
+            transition: all 0.15s;
+        }
+
+        .smart-dl-btn:hover {
+            background: #111;
+            color: #f5f5f0;
+        }
+
+        .hint {
+            color: #aaa;
+            font-size: 0.72rem;
+            margin-top: 10px;
+            line-height: 1.6;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #111;
+            color: #f5f5f0;
+            padding: 12px 28px;
+            font-size: 0.82rem;
+            font-family: 'IBM Plex Mono', monospace;
+            border: 2px solid #111;
+            transition: transform 0.25s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.error {
+            background: #fff;
+            color: #111;
+        }
+
+        .hidden-canvas { display: none; }
+
+        .footer {
+            border-top: 2px solid #111;
+            padding: 16px 24px;
+            text-align: center;
+            font-size: 0.72rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top bar -->
+    <div class="topbar">
+        <div class="topbar-logo">QR—GEN</div>
+        <div class="topbar-nav">
+            <span style="padding:14px 18px;color:#888;font-size:0.82rem">مولّد QR كود احترافي ومجاني</span>
+        </div>
+        <div class="topbar-badge">v1.0 — مجاني</div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-text">
+            <h1>
+                مولّد<br>QR كود
+                <span>أنشئ QR كود احترافي — مجاناً وبدون اشتراك</span>
+            </h1>
+        </div>
+        <div class="hero-side">
+            <div class="hero-stat">
+                أنواع المحتوى
+                <strong>8</strong>
+            </div>
+            <div class="hero-stat">
+                صيغ التحميل
+                <strong>PNG / JPG / SVG</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+
+        <!-- Input Panel -->
+        <div class="input-panel">
+
+            <div class="tabs-row">
+                <button class="tab-btn active" data-tab="url">رابط</button>
+                <button class="tab-btn" data-tab="text">نص</button>
+                <button class="tab-btn" data-tab="wifi">واي فاي</button>
+                <button class="tab-btn" data-tab="vcard">بطاقة</button>
+                <button class="tab-btn" data-tab="email">إيميل</button>
+                <button class="tab-btn" data-tab="phone">جوال</button>
+                <button class="tab-btn" data-tab="sms">SMS</button>
+                <button class="tab-btn" data-tab="smartlink">رابط ذكي</button>
+            </div>
+
+            <!-- URL -->
+            <div class="tab-content active" id="tab-url">
+                <label>الرابط</label>
+                <input type="url" id="input-url" placeholder="https://example.com" dir="ltr" style="text-align:left">
+            </div>
+
+            <!-- Text -->
+            <div class="tab-content" id="tab-text">
+                <label>النص</label>
+                <textarea id="input-text" placeholder="اكتب أي نص..."></textarea>
+            </div>
+
+            <!-- WiFi -->
+            <div class="tab-content" id="tab-wifi">
+                <label>اسم الشبكة (SSID)</label>
+                <input type="text" id="wifi-ssid" placeholder="اسم الشبكة">
+                <label>كلمة المرور</label>
+                <input type="text" id="wifi-pass" placeholder="كلمة مرور الشبكة">
+                <label>نوع التشفير</label>
+                <select id="wifi-enc">
+                    <option value="WPA">WPA / WPA2</option>
+                    <option value="WEP">WEP</option>
+                    <option value="nopass">بدون كلمة مرور</option>
+                </select>
+                <div class="toggle-row">
+                    <span class="toggle-label">شبكة مخفية</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="wifi-hidden">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- vCard -->
+            <div class="tab-content" id="tab-vcard">
+                <div class="inline-fields">
+                    <div>
+                        <label>الاسم الأول</label>
+                        <input type="text" id="vcard-fname" placeholder="فيصل">
+                    </div>
+                    <div>
+                        <label>اسم العائلة</label>
+                        <input type="text" id="vcard-lname" placeholder="العلي">
+                    </div>
+                </div>
+                <label>رقم الجوال</label>
+                <input type="tel" id="vcard-phone" placeholder="+966501234567" dir="ltr" style="text-align:left">
+                <label>الإيميل</label>
+                <input type="email" id="vcard-email" placeholder="email@example.com" dir="ltr" style="text-align:left">
+                <label>الشركة</label>
+                <input type="text" id="vcard-org" placeholder="اسم الشركة">
+                <label>المسمى الوظيفي</label>
+                <input type="text" id="vcard-title" placeholder="المسمى الوظيفي">
+                <label>الموقع</label>
+                <input type="url" id="vcard-url" placeholder="https://example.com" dir="ltr" style="text-align:left">
+            </div>
+
+            <!-- Email -->
+            <div class="tab-content" id="tab-email">
+                <label>عنوان الإيميل</label>
+                <input type="email" id="email-to" placeholder="email@example.com" dir="ltr" style="text-align:left">
+                <label>الموضوع</label>
+                <input type="text" id="email-subject" placeholder="موضوع الرسالة">
+                <label>نص الرسالة</label>
+                <textarea id="email-body" placeholder="محتوى الرسالة..."></textarea>
+            </div>
+
+            <!-- Phone -->
+            <div class="tab-content" id="tab-phone">
+                <label>رقم الجوال</label>
+                <input type="tel" id="input-phone" placeholder="+966501234567" dir="ltr" style="text-align:left">
+            </div>
+
+            <!-- SMS -->
+            <div class="tab-content" id="tab-sms">
+                <label>رقم الجوال</label>
+                <input type="tel" id="sms-phone" placeholder="+966501234567" dir="ltr" style="text-align:left">
+                <label>نص الرسالة</label>
+                <textarea id="sms-body" placeholder="محتوى الرسالة..."></textarea>
+            </div>
+
+            <!-- Smart Link -->
+            <div class="tab-content" id="tab-smartlink">
+                <div class="info-box">
+                    <strong>رابط ذكي:</strong> أدخل روابط تطبيقك في المتجرين، وبتنولّد صفحة تحويل ذكية تتعرف على جهاز المستخدم وتنقله تلقائياً للمتجر المناسب.
+                </div>
+                <label>اسم التطبيق</label>
+                <input type="text" id="app-name" placeholder="اسم تطبيقك">
+                <label>رابط App Store</label>
+                <input type="url" id="app-ios" placeholder="https://apps.apple.com/app/..." dir="ltr" style="text-align:left">
+                <label>رابط Google Play</label>
+                <input type="url" id="app-android" placeholder="https://play.google.com/store/apps/details?id=..." dir="ltr" style="text-align:left">
+                <label>رابط احتياطي (للكمبيوتر)</label>
+                <input type="url" id="app-fallback" placeholder="https://yourwebsite.com" dir="ltr" style="text-align:left">
+                <label>رابط صفحة التحويل (بعد الرفع)</label>
+                <input type="url" id="app-hosted-url" placeholder="https://yourdomain.com/app-redirect.html" dir="ltr" style="text-align:left">
+                <button class="smart-dl-btn" id="dl-redirect-page">↓ تحميل صفحة التحويل الذكية</button>
+                <p class="hint">حمّل الصفحة وارفعها على استضافتك أو GitHub Pages (مجاني) ثم حط الرابط فوق واضغط توليد.</p>
+            </div>
+
+            <!-- Customization -->
+            <div class="section-title">التخصيص</div>
+            <div class="color-controls">
+
+                <div class="color-row">
+                    <div class="color-field">
+                        <label style="margin-top:0">لون QR</label>
+                        <div class="color-input-wrapper">
+                            <input type="text" class="color-hex" id="color-fg-hex" value="#000000" maxlength="7" dir="ltr">
+                            <input type="color" id="color-fg" value="#000000">
+                        </div>
+                    </div>
+                    <div class="color-field">
+                        <label style="margin-top:0">لون الخلفية</label>
+                        <div class="color-input-wrapper">
+                            <input type="text" class="color-hex" id="color-bg-hex" value="#ffffff" maxlength="7" dir="ltr">
+                            <input type="color" id="color-bg" value="#ffffff">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="toggle-row">
+                    <span class="toggle-label">تدرج لوني</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="gradient-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="gradient-color" id="gradient-section">
+                    <div class="color-field">
+                        <label>اللون الثاني</label>
+                        <div class="color-input-wrapper">
+                            <input type="text" class="color-hex" id="color-fg2-hex" value="#888888" maxlength="7" dir="ltr">
+                            <input type="color" id="color-fg2" value="#888888">
+                        </div>
+                    </div>
+                </div>
+
+                <label>تصحيح الأخطاء</label>
+                <div class="option-group">
+                    <button class="opt-btn" data-ec="L">L — 7%</button>
+                    <button class="opt-btn active" data-ec="M">M — 15%</button>
+                    <button class="opt-btn" data-ec="Q">Q — 25%</button>
+                    <button class="opt-btn" data-ec="H">H — 30%</button>
+                </div>
+
+                <label>الحجم</label>
+                <div class="size-row">
+                    <input type="range" id="qr-size" min="150" max="600" value="300" step="10">
+                    <span id="size-value">300px</span>
+                </div>
+
+                <label>لوقو (اختياري)</label>
+                <div class="upload-area" id="upload-area">
+                    <input type="file" id="logo-input" accept="image/*">
+                    <p>↑ اسحب أو اضغط لاختيار صورة</p>
+                </div>
+                <div class="logo-preview" id="logo-preview">
+                    <img id="logo-img" src="" alt="Logo">
+                    <button class="remove-logo" id="remove-logo">إزالة اللوقو</button>
+                </div>
+
+                <button class="generate-btn" id="generate-btn">توليد QR كود ←</button>
+            </div>
+        </div>
+
+        <!-- Output Panel -->
+        <div class="output-panel">
+            <div class="qr-placeholder" id="qr-placeholder">
+                <svg viewBox="0 0 100 100" fill="none" stroke="#ddd" stroke-width="2">
+                    <rect x="10" y="10" width="25" height="25" rx="2"/>
+                    <rect x="65" y="10" width="25" height="25" rx="2"/>
+                    <rect x="10" y="65" width="25" height="25" rx="2"/>
+                    <rect x="15" y="15" width="15" height="15" rx="1" fill="#ddd"/>
+                    <rect x="70" y="15" width="15" height="15" rx="1" fill="#ddd"/>
+                    <rect x="15" y="70" width="15" height="15" rx="1" fill="#ddd"/>
+                    <rect x="42" y="10" width="8" height="8" fill="#eee"/>
+                    <rect x="42" y="42" width="8" height="8" fill="#eee"/>
+                    <rect x="55" y="42" width="8" height="8" fill="#eee"/>
+                    <rect x="42" y="55" width="8" height="8" fill="#eee"/>
+                    <rect x="68" y="55" width="8" height="8" fill="#eee"/>
+                    <rect x="80" y="68" width="8" height="8" fill="#eee"/>
+                    <rect x="68" y="80" width="8" height="8" fill="#eee"/>
+                </svg>
+                <p>أدخل المحتوى واضغط توليد</p>
+            </div>
+
+            <div id="qrcode-container"></div>
+            <canvas id="final-canvas" class="hidden-canvas"></canvas>
+            <div class="download-btns" id="download-btns" style="display:none">
+                <button class="dl-btn" id="dl-png">PNG ↓</button>
+                <button class="dl-btn" id="dl-svg">SVG ↓</button>
+                <button class="dl-btn" id="dl-jpg">JPG ↓</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">QR—GEN — مولّد QR كود مجاني — لا اشتراك، لا تسجيل</div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let currentTab = 'url';
+        let errorCorrectionLevel = 'M';
+        let logoDataUrl = null;
+        let qrInstance = null;
+
+        // ─── Tab switching ───
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                currentTab = btn.dataset.tab;
+                document.getElementById('tab-' + currentTab).classList.add('active');
+            });
+        });
+
+        // ─── Error correction ───
+        document.querySelectorAll('.opt-btn[data-ec]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.opt-btn[data-ec]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                errorCorrectionLevel = btn.dataset.ec;
+            });
+        });
+
+        // ─── Color sync ───
+        function syncColors(colorId, hexId) {
+            const colorEl = document.getElementById(colorId);
+            const hexEl = document.getElementById(hexId);
+            colorEl.addEventListener('input', () => hexEl.value = colorEl.value);
+            hexEl.addEventListener('input', () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexEl.value)) colorEl.value = hexEl.value;
+            });
+        }
+        syncColors('color-fg', 'color-fg-hex');
+        syncColors('color-bg', 'color-bg-hex');
+        syncColors('color-fg2', 'color-fg2-hex');
+
+        // ─── Gradient ───
+        document.getElementById('gradient-toggle').addEventListener('change', function() {
+            document.getElementById('gradient-section').classList.toggle('show', this.checked);
+        });
+
+        // ─── Size ───
+        const sizeSlider = document.getElementById('qr-size');
+        sizeSlider.addEventListener('input', () => {
+            document.getElementById('size-value').textContent = sizeSlider.value + 'px';
+        });
+
+        // ─── Logo ───
+        const logoInput = document.getElementById('logo-input');
+        const logoPreview = document.getElementById('logo-preview');
+        const logoImg = document.getElementById('logo-img');
+
+        logoInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    logoDataUrl = e.target.result;
+                    logoImg.src = logoDataUrl;
+                    logoPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('remove-logo').addEventListener('click', () => {
+            logoDataUrl = null;
+            logoInput.value = '';
+            logoPreview.style.display = 'none';
+        });
+
+        // ─── Toast ───
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast' + (isError ? ' error' : '');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // ─── Get QR data ───
+        function getQRData() {
+            switch (currentTab) {
+                case 'url':
+                    return document.getElementById('input-url').value.trim();
+                case 'text':
+                    return document.getElementById('input-text').value.trim();
+                case 'wifi': {
+                    const ssid = document.getElementById('wifi-ssid').value.trim();
+                    const pass = document.getElementById('wifi-pass').value.trim();
+                    const enc = document.getElementById('wifi-enc').value;
+                    const hidden = document.getElementById('wifi-hidden').checked;
+                    if (!ssid) return '';
+                    return `WIFI:T:${enc};S:${ssid};P:${pass};H:${hidden};;`;
+                }
+                case 'vcard': {
+                    const fn = document.getElementById('vcard-fname').value.trim();
+                    const ln = document.getElementById('vcard-lname').value.trim();
+                    const phone = document.getElementById('vcard-phone').value.trim();
+                    const email = document.getElementById('vcard-email').value.trim();
+                    const org = document.getElementById('vcard-org').value.trim();
+                    const title = document.getElementById('vcard-title').value.trim();
+                    const url = document.getElementById('vcard-url').value.trim();
+                    if (!fn && !ln) return '';
+                    let vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${ln};${fn};;;\nFN:${fn} ${ln}`;
+                    if (phone) vcard += `\nTEL:${phone}`;
+                    if (email) vcard += `\nEMAIL:${email}`;
+                    if (org) vcard += `\nORG:${org}`;
+                    if (title) vcard += `\nTITLE:${title}`;
+                    if (url) vcard += `\nURL:${url}`;
+                    vcard += `\nEND:VCARD`;
+                    return vcard;
+                }
+                case 'email': {
+                    const to = document.getElementById('email-to').value.trim();
+                    const subj = document.getElementById('email-subject').value.trim();
+                    const body = document.getElementById('email-body').value.trim();
+                    if (!to) return '';
+                    return `mailto:${to}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+                }
+                case 'phone': {
+                    const phone = document.getElementById('input-phone').value.trim();
+                    return phone ? `tel:${phone}` : '';
+                }
+                case 'sms': {
+                    const phone = document.getElementById('sms-phone').value.trim();
+                    const body = document.getElementById('sms-body').value.trim();
+                    if (!phone) return '';
+                    return `sms:${phone}${body ? '?body=' + encodeURIComponent(body) : ''}`;
+                }
+                case 'smartlink': {
+                    const hostedUrl = document.getElementById('app-hosted-url').value.trim();
+                    if (!hostedUrl) {
+                        showToast('أدخل رابط صفحة التحويل بعد ما ترفعها', true);
+                        return '';
+                    }
+                    return hostedUrl;
+                }
+                default:
+                    return '';
+            }
+        }
+
+        function hexToRgb(hex) {
+            return {
+                r: parseInt(hex.slice(1, 3), 16),
+                g: parseInt(hex.slice(3, 5), 16),
+                b: parseInt(hex.slice(5, 7), 16)
+            };
+        }
+
+        // ─── Generate ───
+        document.getElementById('generate-btn').addEventListener('click', generateQR);
+
+        function generateQR() {
+            const data = getQRData();
+            if (!data) {
+                showToast('أدخل المحتوى أولاً', true);
+                return;
+            }
+
+            const size = parseInt(sizeSlider.value);
+            const fgColor = document.getElementById('color-fg').value;
+            const bgColor = document.getElementById('color-bg').value;
+            const useGradient = document.getElementById('gradient-toggle').checked;
+            const fgColor2 = document.getElementById('color-fg2').value;
+
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '';
+            container.style.display = 'block';
+            document.getElementById('qr-placeholder').style.display = 'none';
+
+            try {
+                qrInstance = new QRCode(container, {
+                    text: data,
+                    width: size,
+                    height: size,
+                    colorDark: fgColor,
+                    colorLight: bgColor,
+                    correctLevel: QRCode.CorrectLevel[errorCorrectionLevel]
+                });
+
+                setTimeout(() => {
+                    const canvas = container.querySelector('canvas');
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+
+                    if (useGradient) {
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const pixels = imageData.data;
+                        const c1 = hexToRgb(fgColor);
+                        const c2 = hexToRgb(fgColor2);
+                        const bg = hexToRgb(bgColor);
+                        for (let y = 0; y < canvas.height; y++) {
+                            const ratio = y / canvas.height;
+                            const r = Math.round(c1.r + (c2.r - c1.r) * ratio);
+                            const g = Math.round(c1.g + (c2.g - c1.g) * ratio);
+                            const b = Math.round(c1.b + (c2.b - c1.b) * ratio);
+                            for (let x = 0; x < canvas.width; x++) {
+                                const i = (y * canvas.width + x) * 4;
+                                if (pixels[i] !== bg.r || pixels[i+1] !== bg.g || pixels[i+2] !== bg.b) {
+                                    pixels[i] = r; pixels[i+1] = g; pixels[i+2] = b;
+                                }
+                            }
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+                    }
+
+                    if (logoDataUrl) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const logoSize = size * 0.22;
+                            const x = (canvas.width - logoSize) / 2;
+                            const y = (canvas.height - logoSize) / 2;
+                            const padding = 6;
+                            ctx.fillStyle = bgColor;
+                            ctx.beginPath();
+                            ctx.roundRect(x - padding, y - padding, logoSize + padding * 2, logoSize + padding * 2, 4);
+                            ctx.fill();
+                            ctx.drawImage(img, x, y, logoSize, logoSize);
+                        };
+                        img.src = logoDataUrl;
+                    }
+
+                    document.getElementById('download-btns').style.display = 'flex';
+                }, 100);
+
+            } catch(e) {
+                showToast('حدث خطأ في التوليد', true);
+                console.error(e);
+            }
+        }
+
+        // ─── Downloads ───
+        document.getElementById('dl-png').addEventListener('click', () => {
+            const canvas = document.querySelector('#qrcode-container canvas');
+            if (!canvas) return;
+            const link = document.createElement('a');
+            link.download = 'qrcode.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('تم تحميل PNG');
+        });
+
+        document.getElementById('dl-jpg').addEventListener('click', () => {
+            const canvas = document.querySelector('#qrcode-container canvas');
+            if (!canvas) return;
+            const c = document.createElement('canvas');
+            c.width = canvas.width; c.height = canvas.height;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.drawImage(canvas, 0, 0);
+            const link = document.createElement('a');
+            link.download = 'qrcode.jpg';
+            link.href = c.toDataURL('image/jpeg', 0.95);
+            link.click();
+            showToast('تم تحميل JPG');
+        });
+
+        document.getElementById('dl-svg').addEventListener('click', () => {
+            const canvas = document.querySelector('#qrcode-container canvas');
+            if (!canvas) return;
+            const size = canvas.width;
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, size, size);
+            const pixels = imageData.data;
+            const bgColor = document.getElementById('color-bg').value;
+            const bg = hexToRgb(bgColor);
+            let svgRects = '';
+            const moduleSize = Math.max(1, Math.round(size / 50));
+            for (let y = 0; y < size; y += moduleSize) {
+                for (let x = 0; x < size; x += moduleSize) {
+                    const i = (y * size + x) * 4;
+                    if (pixels[i] !== bg.r || pixels[i+1] !== bg.g || pixels[i+2] !== bg.b) {
+                        svgRects += `<rect x="${x}" y="${y}" width="${moduleSize}" height="${moduleSize}" fill="rgb(${pixels[i]},${pixels[i+1]},${pixels[i+2]})"/>`;
+                    }
+                }
+            }
+            const svg = `<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">\n<rect width="${size}" height="${size}" fill="${bgColor}"/>\n${svgRects}\n</svg>`;
+            const blob = new Blob([svg], { type: 'image/svg+xml' });
+            const link = document.createElement('a');
+            link.download = 'qrcode.svg';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            showToast('تم تحميل SVG');
+        });
+
+        // ─── Smart redirect download ───
+        document.getElementById('dl-redirect-page').addEventListener('click', () => {
+            const appName = document.getElementById('app-name').value.trim() || 'التطبيق';
+            const iosLink = document.getElementById('app-ios').value.trim();
+            const androidLink = document.getElementById('app-android').value.trim();
+            const fallbackLink = document.getElementById('app-fallback').value.trim();
+
+            if (!iosLink && !androidLink) {
+                showToast('أدخل رابط واحد على الأقل', true);
+                return;
+            }
+
+            const redirectHTML = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${appName}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#f5f5f0;min-height:100vh;display:flex;align-items:center;justify-content:center;color:#111;direction:rtl}
+.card{background:#fff;border:2px solid #111;padding:48px 36px;text-align:center;max-width:400px;width:90%}
+h1{font-size:1.5rem;margin-bottom:8px}
+p{color:#888;margin-bottom:28px;font-size:0.9rem}
+.spinner{width:32px;height:32px;border:2px solid #ddd;border-top:2px solid #111;border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status{font-size:0.82rem;color:#888;margin-bottom:24px;font-family:monospace}
+.btns{display:flex;flex-direction:column;gap:10px}
+.btn{display:block;padding:14px;border:2px solid #111;text-decoration:none;font-size:0.9rem;font-weight:600;text-align:center;transition:all 0.15s;color:#111;background:#fff}
+.btn:hover{background:#111;color:#f5f5f0}
+.note{color:#aaa;font-size:0.75rem;margin-top:20px}
+</style>
+<script>
+(function(){
+var ua=navigator.userAgent||navigator.vendor||window.opera;
+var iosLink="${iosLink}";
+var androidLink="${androidLink}";
+var fallbackLink="${fallbackLink}";
+var isIOS=/iPad|iPhone|iPod/.test(ua)&&!window.MSStream;
+var isAndroid=/android/i.test(ua);
+function go(url){if(url)window.location.href=url}
+setTimeout(function(){
+if(isIOS&&iosLink){go(iosLink)}
+else if(isAndroid&&androidLink){go(androidLink)}
+else if(fallbackLink){go(fallbackLink)}
+else{document.getElementById('status').textContent='اختر المتجر يدوياً';document.getElementById('spinner').style.display='none'}
+},1500);
+})();
+<\/script>
+</head>
+<body>
+<div class="card">
+<h1>${appName}</h1>
+<p>جاري تحويلك لتحميل التطبيق...</p>
+<div class="spinner" id="spinner"></div>
+<div class="status" id="status">نتعرف على جهازك...</div>
+<div class="btns">
+${iosLink ? '<a href="'+iosLink+'" class="btn">App Store ←</a>' : ''}
+${androidLink ? '<a href="'+androidLink+'" class="btn">Google Play ←</a>' : ''}
+</div>
+<p class="note">إذا ما تحول تلقائياً، اضغط الزر المناسب</p>
+</div>
+</body>
+</html>`;
+
+            const blob = new Blob([redirectHTML], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.download = 'app-redirect.html';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            showToast('تم تحميل صفحة التحويل');
+        });
+
+        // ─── Enter ───
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') generateQR();
+        });
+    </script>
+</body>
+</html>
