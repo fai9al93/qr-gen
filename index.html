@@ -648,6 +648,17 @@
 
         .hidden-canvas { display: none; }
 
+        .checkerboard {
+            background-image:
+                linear-gradient(45deg, #e0e0e0 25%, transparent 25%),
+                linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #e0e0e0 75%),
+                linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+            background-color: #fff;
+        }
+
         .footer {
             border-top: 2px solid #111;
             padding: 16px 24px;
@@ -842,6 +853,14 @@
                     </div>
                 </div>
 
+                <div class="toggle-row">
+                    <span class="toggle-label">خلفية شفافة (مفرّغ)</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="transparent-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
                 <label>تصحيح الأخطاء</label>
                 <div class="option-group">
                     <button class="opt-btn" data-ec="L">L — 7%</button>
@@ -953,6 +972,12 @@
         const sizeSlider = document.getElementById('qr-size');
         sizeSlider.addEventListener('input', () => {
             document.getElementById('size-value').textContent = sizeSlider.value + 'px';
+        });
+
+        // ─── Transparent toggle ───
+        document.getElementById('transparent-toggle').addEventListener('change', function() {
+            const bgField = document.getElementById('color-bg').closest('.color-field');
+            if (bgField) bgField.style.opacity = this.checked ? '0.35' : '1';
         });
 
         // ─── Logo ───
@@ -1082,11 +1107,13 @@
             const fgColor = document.getElementById('color-fg').value;
             const bgColor = document.getElementById('color-bg').value;
             const useGradient = document.getElementById('gradient-toggle').checked;
+            const useTransparent = document.getElementById('transparent-toggle').checked;
             const fgColor2 = document.getElementById('color-fg2').value;
 
             const container = document.getElementById('qrcode-container');
             container.innerHTML = '';
             container.style.display = 'block';
+            container.classList.toggle('checkerboard', useTransparent);
             document.getElementById('qr-placeholder').style.display = 'none';
 
             try {
@@ -1125,6 +1152,18 @@
                         ctx.putImageData(imageData, 0, 0);
                     }
 
+                    if (useTransparent) {
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const pixels = imageData.data;
+                        const bg = hexToRgb(bgColor);
+                        for (let i = 0; i < pixels.length; i += 4) {
+                            if (Math.abs(pixels[i] - bg.r) < 10 && Math.abs(pixels[i+1] - bg.g) < 10 && Math.abs(pixels[i+2] - bg.b) < 10) {
+                                pixels[i+3] = 0;
+                            }
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+                    }
+
                     if (logoDataUrl) {
                         const img = new Image();
                         img.onload = function() {
@@ -1132,7 +1171,7 @@
                             const x = (canvas.width - logoSize) / 2;
                             const y = (canvas.height - logoSize) / 2;
                             const padding = 6;
-                            ctx.fillStyle = bgColor;
+                            ctx.fillStyle = useTransparent ? 'rgba(255,255,255,0)' : bgColor;
                             ctx.beginPath();
                             ctx.roundRect(x - padding, y - padding, logoSize + padding * 2, logoSize + padding * 2, 4);
                             ctx.fill();
