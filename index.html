@@ -1173,15 +1173,12 @@
                     }
 
                     function finalize() {
-                        // Show final-canvas inside the container for preview
-                        srcCanvas.style.display = 'none';
+                        // Remove original canvas, show final-canvas
+                        srcCanvas.remove();
+                        finalCanvas.className = '';
+                        finalCanvas.style.display = 'block';
                         if (!container.contains(finalCanvas)) {
-                            finalCanvas.style.display = 'block';
-                            finalCanvas.className = '';
                             container.appendChild(finalCanvas);
-                        } else {
-                            finalCanvas.style.display = 'block';
-                            finalCanvas.className = '';
                         }
                         document.getElementById('download-btns').style.display = 'flex';
                         document.getElementById('save-qr-btn').style.display = 'block';
