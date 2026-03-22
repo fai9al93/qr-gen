@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تحميل التطبيق</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'IBM Plex Sans Arabic',sans-serif;background:#f5f5f0;min-height:100vh;display:flex;align-items:center;justify-content:center;color:#111;direction:rtl}
+.card{background:#fff;border:2px solid #111;padding:48px 36px;text-align:center;max-width:400px;width:90%}
+h1{font-size:1.5rem;margin-bottom:8px;font-family:'IBM Plex Mono',monospace}
+p{color:#888;margin-bottom:28px;font-size:0.9rem}
+.spinner{width:32px;height:32px;border:2px solid #ddd;border-top:2px solid #111;border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status{font-size:0.82rem;color:#888;margin-bottom:24px;font-family:monospace}
+.btns{display:flex;flex-direction:column;gap:10px}
+.btn{display:block;padding:14px;border:2px solid #111;text-decoration:none;font-size:0.9rem;font-weight:600;text-align:center;transition:all 0.15s;color:#111;background:#fff}
+.btn:hover{background:#111;color:#f5f5f0}
+.note{color:#aaa;font-size:0.75rem;margin-top:20px}
+.error{color:#c00;font-size:0.85rem;margin-top:16px}
+</style>
+<script>
+(function(){
+    var params = new URLSearchParams(window.location.search);
+    var iosLink = params.get('ios') || '';
+    var androidLink = params.get('android') || '';
+    var fallbackLink = params.get('fallback') || '';
+    var appName = params.get('name') || 'التطبيق';
+
+    // Set page title
+    document.title = appName + ' — تحميل';
+
+    var ua = navigator.userAgent || navigator.vendor || window.opera;
+    var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    var isAndroid = /android/i.test(ua);
+
+    function go(url){ if(url) window.location.href = url; }
+
+    // Wait for DOM
+    document.addEventListener('DOMContentLoaded', function(){
+        // Set app name
+        var h1 = document.getElementById('app-title');
+        if(h1) h1.textContent = appName;
+
+        // Build buttons
+        var btnsEl = document.getElementById('btns');
+        if(iosLink) btnsEl.innerHTML += '<a href="'+iosLink+'" class="btn">App Store ←</a>';
+        if(androidLink) btnsEl.innerHTML += '<a href="'+androidLink+'" class="btn">Google Play ←</a>';
+
+        // If no links provided
+        if(!iosLink && !androidLink){
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('status').textContent = 'لم يتم تحديد روابط التطبيق';
+            return;
+        }
+
+        // Auto-redirect after 1.5s
+        setTimeout(function(){
+            if(isIOS && iosLink){ go(iosLink); }
+            else if(isAndroid && androidLink){ go(androidLink); }
+            else if(fallbackLink){ go(fallbackLink); }
+            else {
+                document.getElementById('status').textContent = 'اختر المتجر يدوياً';
+                document.getElementById('spinner').style.display = 'none';
+            }
+        }, 1500);
+    });
+})();
+</script>
+</head>
+<body>
+<div class="card">
+<h1 id="app-title">التطبيق</h1>
+<p>جاري تحويلك لتحميل التطبيق...</p>
+<div class="spinner" id="spinner"></div>
+<div class="status" id="status">نتعرف على جهازك...</div>
+<div class="btns" id="btns"></div>
+<p class="note">إذا ما تحول تلقائياً، اضغط الزر المناسب</p>
+</div>
+</body>
+</html>

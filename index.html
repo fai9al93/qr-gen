@@ -790,7 +790,7 @@
             <!-- Smart Link -->
             <div class="tab-content" id="tab-smartlink">
                 <div class="info-box">
-                    <strong>رابط ذكي:</strong> أدخل روابط تطبيقك في المتجرين، وبتنولّد صفحة تحويل ذكية تتعرف على جهاز المستخدم وتنقله تلقائياً للمتجر المناسب.
+                    <strong>رابط ذكي:</strong> أدخل روابط تطبيقك في المتجرين، وبيتولّد QR كود برابط تحويل ذكي يتعرف على جهاز المستخدم وينقله تلقائياً للمتجر المناسب — بدون أي خطوات إضافية.
                 </div>
                 <label>اسم التطبيق</label>
                 <input type="text" id="app-name" placeholder="اسم تطبيقك">
@@ -800,10 +800,7 @@
                 <input type="url" id="app-android" placeholder="https://play.google.com/store/apps/details?id=..." dir="ltr" style="text-align:left">
                 <label>رابط احتياطي (للكمبيوتر)</label>
                 <input type="url" id="app-fallback" placeholder="https://yourwebsite.com" dir="ltr" style="text-align:left">
-                <label>رابط صفحة التحويل (بعد الرفع)</label>
-                <input type="url" id="app-hosted-url" placeholder="https://yourdomain.com/app-redirect.html" dir="ltr" style="text-align:left">
-                <button class="smart-dl-btn" id="dl-redirect-page">↓ تحميل صفحة التحويل الذكية</button>
-                <p class="hint">حمّل الصفحة وارفعها على استضافتك أو GitHub Pages (مجاني) ثم حط الرابط فوق واضغط توليد.</p>
+                <p class="hint">أدخل رابط واحد على الأقل (App Store أو Google Play) واضغط توليد.</p>
             </div>
 
             <!-- Customization -->
@@ -1042,12 +1039,21 @@
                     return `sms:${phone}${body ? '?body=' + encodeURIComponent(body) : ''}`;
                 }
                 case 'smartlink': {
-                    const hostedUrl = document.getElementById('app-hosted-url').value.trim();
-                    if (!hostedUrl) {
-                        showToast('أدخل رابط صفحة التحويل بعد ما ترفعها', true);
+                    const appName = document.getElementById('app-name').value.trim();
+                    const iosLink = document.getElementById('app-ios').value.trim();
+                    const androidLink = document.getElementById('app-android').value.trim();
+                    const fallbackLink = document.getElementById('app-fallback').value.trim();
+                    if (!iosLink && !androidLink) {
+                        showToast('أدخل رابط واحد على الأقل (App Store أو Google Play)', true);
                         return '';
                     }
-                    return hostedUrl;
+                    const baseUrl = window.location.href.replace(/\/[^\/]*$/, '/redirect.html');
+                    const params = new URLSearchParams();
+                    if (appName) params.set('name', appName);
+                    if (iosLink) params.set('ios', iosLink);
+                    if (androidLink) params.set('android', androidLink);
+                    if (fallbackLink) params.set('fallback', fallbackLink);
+                    return baseUrl + '?' + params.toString();
                 }
                 default:
                     return '';
@@ -1199,78 +1205,7 @@
             showToast('تم تحميل SVG');
         });
 
-        // ─── Smart redirect download ───
-        document.getElementById('dl-redirect-page').addEventListener('click', () => {
-            const appName = document.getElementById('app-name').value.trim() || 'التطبيق';
-            const iosLink = document.getElementById('app-ios').value.trim();
-            const androidLink = document.getElementById('app-android').value.trim();
-            const fallbackLink = document.getElementById('app-fallback').value.trim();
-
-            if (!iosLink && !androidLink) {
-                showToast('أدخل رابط واحد على الأقل', true);
-                return;
-            }
-
-            const redirectHTML = `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${appName}</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:#f5f5f0;min-height:100vh;display:flex;align-items:center;justify-content:center;color:#111;direction:rtl}
-.card{background:#fff;border:2px solid #111;padding:48px 36px;text-align:center;max-width:400px;width:90%}
-h1{font-size:1.5rem;margin-bottom:8px}
-p{color:#888;margin-bottom:28px;font-size:0.9rem}
-.spinner{width:32px;height:32px;border:2px solid #ddd;border-top:2px solid #111;border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 20px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.status{font-size:0.82rem;color:#888;margin-bottom:24px;font-family:monospace}
-.btns{display:flex;flex-direction:column;gap:10px}
-.btn{display:block;padding:14px;border:2px solid #111;text-decoration:none;font-size:0.9rem;font-weight:600;text-align:center;transition:all 0.15s;color:#111;background:#fff}
-.btn:hover{background:#111;color:#f5f5f0}
-.note{color:#aaa;font-size:0.75rem;margin-top:20px}
-</style>
-<script>
-(function(){
-var ua=navigator.userAgent||navigator.vendor||window.opera;
-var iosLink="${iosLink}";
-var androidLink="${androidLink}";
-var fallbackLink="${fallbackLink}";
-var isIOS=/iPad|iPhone|iPod/.test(ua)&&!window.MSStream;
-var isAndroid=/android/i.test(ua);
-function go(url){if(url)window.location.href=url}
-setTimeout(function(){
-if(isIOS&&iosLink){go(iosLink)}
-else if(isAndroid&&androidLink){go(androidLink)}
-else if(fallbackLink){go(fallbackLink)}
-else{document.getElementById('status').textContent='اختر المتجر يدوياً';document.getElementById('spinner').style.display='none'}
-},1500);
-})();
-<\/script>
-</head>
-<body>
-<div class="card">
-<h1>${appName}</h1>
-<p>جاري تحويلك لتحميل التطبيق...</p>
-<div class="spinner" id="spinner"></div>
-<div class="status" id="status">نتعرف على جهازك...</div>
-<div class="btns">
-${iosLink ? '<a href="'+iosLink+'" class="btn">App Store ←</a>' : ''}
-${androidLink ? '<a href="'+androidLink+'" class="btn">Google Play ←</a>' : ''}
-</div>
-<p class="note">إذا ما تحول تلقائياً، اضغط الزر المناسب</p>
-</div>
-</body>
-</html>`;
-
-            const blob = new Blob([redirectHTML], { type: 'text/html' });
-            const link = document.createElement('a');
-            link.download = 'app-redirect.html';
-            link.href = URL.createObjectURL(blob);
-            link.click();
-            showToast('تم تحميل صفحة التحويل');
-        });
+        // Smart redirect is now automatic — no download needed
 
         // ─── Enter ───
         document.addEventListener('keydown', (e) => {
